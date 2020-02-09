@@ -5,7 +5,7 @@
 
 /*
 Plugin Name: Hubtel Checkout API Client Plugin
-Plugin URI: http://github.com/hubtel-checkout-api-client-plugin
+Plugin URI: https://github.com/gagyekum/hubtel-checkout-api-client-wp-plugin
 Description: Hubtel checkout api wrapper
 Version: 1.0.0
 Author: Gideon Agyekum
