@@ -1,17 +1,17 @@
 <?php
 /**
-* @package HubtelCheckoutAPIClientPlugin
+* @package SlydepayMerchantAPIClientPlugin
 */
 
 /*
-Plugin Name: Hubtel Checkout API Client Plugin
-Plugin URI: https://github.com/gagyekum/hubtel-checkout-api-client-wp-plugin
-Description: Hubtel checkout api wrapper
+Plugin Name: Slydepay Merchant API Client Plugin
+Plugin URI: https://github.com/gagyekum/slydepay-merchant-api-client-wp-plugin
+Description: Slydepay Merchant api wrapper
 Version: 1.0.0
 Author: Gideon Agyekum
 Author URI: https://github.com/gagyekum
 License: GPLv2 or later
-Text Domain: hubtel-checkout-api-client-plugin
+Text Domain: slydepay-merchant-api-client-plugin
 */
 
 //defined('ABSPATH') or die('You can\'t access this file');
@@ -20,7 +20,7 @@ if (!function_exists('add_action')) {
     exit;
 }
 
-class HubtelCheckoutAPIClientPlugin {
+class SlydepayMerchantAPIClientPlugin {
 
     private static $instance;
     
@@ -29,15 +29,15 @@ class HubtelCheckoutAPIClientPlugin {
 
 
     private function __construct() {
-        add_action( 'init_hubtel_checkout', array( $this, 'create_invoice' ) );
-        add_action( 'check_hubtel_payment_status', array( $this, 'get_invoice_status' ) );
+        add_action( 'init_slydepay_merchant', array( $this, 'create_invoice' ) );
+        add_action( 'check_slydepay_payment_status', array( $this, 'get_invoice_status' ) );
     }
 
     /**
-     * Creates an instance of HubtelCheckoutAPIClientPlugin
+     * Creates an instance of SlydepayMerchantAPIClientPlugin
      *
      * @access public
-     * @return HubtelCheckoutAPIClientPlugin
+     * @return SlydepayMerchantAPIClientPlugin
      */
     public function get_instance() {
         if ( null == self::$instance ) {
@@ -47,15 +47,15 @@ class HubtelCheckoutAPIClientPlugin {
     }
 
     /**
-     * Triggers the checkout by creating an invoice.
+     * Triggers the Merchant by creating an invoice.
      *
      * @access public
      * @param  array $invoice_data  Invoice data
-     * @return array('status' => 'success', 'checkout_url' => 'https://hubtel.com/online-chekout').
+     * @return array('status' => 'success', 'Merchant_url' => 'https://slydepay.com/online-chekout').
      */
     public function create_invoice(array $invoice_data) {
 
-        $response = $this->make_api_post_request('/pos/onlinecheckout/items/initiate', $invoice_data);
+        $response = $this->make_api_post_request('/pos/onlinemerchant/items/initiate', $invoice_data);
 
         $status_code = $response['status_code'];
 
@@ -64,7 +64,7 @@ class HubtelCheckoutAPIClientPlugin {
 
             return array(
                 'status'   => 'success',
-                'checkout_url' => $response_body['data']['checkoutDirectUrl']
+                'merchant_url' => $response_body['data']['merchantDirectUrl']
             );
         }
 
@@ -79,7 +79,7 @@ class HubtelCheckoutAPIClientPlugin {
      * @return array('status' => 'success', 'payment_status' => 'pending')
      */
     public function get_invoice_status(string $invoice_number) {
-        $response = $this->make_api_get_request("/pos/onlinecheckout/items/$invoice_number");
+        $response = $this->make_api_get_request("/pos/onlinemerchant/items/$invoice_number");
 
         $status_code = $response['status_code'];
 
@@ -166,5 +166,5 @@ class HubtelCheckoutAPIClientPlugin {
     }
 }
 
-if (class_exists('HubtelCheckoutAPIClientPlugin'))
-    HubtelCheckoutAPIClientPlugin::get_instance();
+if (class_exists('SlydepayMerchantAPIClientPlugin'))
+    SlydepayMerchantAPIClientPlugin::get_instance();
