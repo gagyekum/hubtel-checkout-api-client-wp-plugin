@@ -23,21 +23,21 @@ if (!function_exists('add_action')) {
 class SlydepayMerchantAPIClientPlugin {
 
     private static $instance;
-    
-    private const BASE_URI = '';
-    private const API_KEY = '';
-
+    private const BASE_URI = 'https://app.slydepay.com.gh';
 
     private function __construct() {
+        add_action( 'init_slydepay_merchant', array( $this, 'get_pay_options' ) );
         add_action( 'init_slydepay_merchant', array( $this, 'create_invoice' ) );
-        add_action( 'check_slydepay_payment_status', array( $this, 'get_invoice_status' ) );
+        add_action( 'init_slydepay_merchant', array( $this, 'send_invoice' ) );
+        add_action( 'init_slydepay_merchant', array( $this, 'check_payment_status' ) );
+        add_action( 'init_slydepay_merchant', array( $this, 'confirm_transaction' ) );
     }
 
     /**
      * Creates an instance of SlydepayMerchantAPIClientPlugin
      *
      * @access public
-     * @return SlydepayMerchantAPIClientPlugin
+     * @return SlydepayMerchantAPIClientPlugin slydepay merchant api client instance
      */
     public function get_instance() {
         if ( null == self::$instance ) {
@@ -46,64 +46,18 @@ class SlydepayMerchantAPIClientPlugin {
         return self::$instance;
     }
 
-    /**
-     * Triggers the Merchant by creating an invoice.
-     *
-     * @access public
-     * @param  array $invoice_data  Invoice data
-     * @return array('status' => 'success', 'Merchant_url' => 'https://slydepay.com/online-chekout').
-     */
-    public function create_invoice(array $invoice_data) {
-
-        $response = $this->make_api_post_request('/pos/onlinemerchant/items/initiate', $invoice_data);
-
-        $status_code = $response['status_code'];
-
-        if ($status_code == 200) {
-            $response_body = $response['body'];
-
-            return array(
-                'status'   => 'success',
-                'merchant_url' => $response_body['data']['merchantDirectUrl']
-            );
-        }
-
-        return $this->get_http_error_response($status_code);
-    }
-
-    /**
-     * Checks invoice payment status
-     * 
-     * @access public
-     * @param string $invoice_number Invoice Identifier
-     * @return array('status' => 'success', 'payment_status' => 'pending')
-     */
-    public function get_invoice_status(string $invoice_number) {
-        $response = $this->make_api_get_request("/pos/onlinemerchant/items/$invoice_number");
-
-        $status_code = $response['status_code'];
-
-        if ($status_code == 200) {
-            $response_body = $response['body'];
-
-            return array(
-                'status'   => 'success',
-                'payment_status' => $response_body['data']['paymentStatus']
-            );
-        }
-
-        return $this->get_http_error_response($status_code);
-    }
-
     private function get_headers() {
         return array(
-            'Authorization' => 'Bearer ' . self::API_KEY,
             'Content-Type' => 'application/json'
         );
     }
 
+    private function get_url($path) {
+        return self::BASE_URI . $path;
+    }
+
     private function make_api_request(string $path, string $method = 'get', array $data = NULL) {
-        $url = self::BASE_URI . $path;
+        $url = $this->get_url($path);
         $args = array('headers' => $this->get_headers());
 
         if (!is_null($data)) 
@@ -120,7 +74,10 @@ class SlydepayMerchantAPIClientPlugin {
             $response_body_args = json_decode($response_body, true);
         } catch (Exception $e) {
             $response_code = 500;
-            $response_body_args = array('errors' => $e->getMessage());
+            $response_body_args = array(
+                'errorCode' => 'INTERNAL_SERVER_ERROR',
+                'errorMessage' => $e->getMessage()
+            );
         }
 
         return array(
@@ -129,40 +86,59 @@ class SlydepayMerchantAPIClientPlugin {
         );
     }
 
-    private function make_api_post_request(string $path, array $data) {
-        return $this->make_api_request($path, 'post', $data);
+    /**
+     * Retrieves a list of all possible payment options on Slydepay.
+     *
+     * @access public
+     * @param array $merchant_info Merchant details
+     * @return array Http response 
+     */
+    public function get_pay_options(array $merchant_info) {
+        return $this->make_api_request('/api/merchant/invoice/payoptions', 'post', $merchant_info);
     }
 
-    private function make_api_get_request(string $path) {
-        return $this->make_api_request($path);
+    /**
+     * Creates an invoice and sends back slydepay pay token.
+     *
+     * @access public
+     * @param array $invoice_details Invoice details
+     * @return array Http response
+     */
+    public function create_invoice($invoice_details) {
+        return $this->make_api_request('/api/merchant/invoice/create', 'post', $invoice_details);
     }
 
-    private function get_http_error_response(int $status_code) {
-        $response = array();
+    /**
+     * Sends an invoice priorly generated to you customer.
+     *
+     * @access public
+     * @param array $invoice_details Invoice details
+     * @return array Http response
+     */
+    public function send_invoice($invoice_details) {
+        return $this->make_api_request('/api/merchant/invoice/send', 'post', $invoice_details);
+    }
 
-        switch ($status_code) {
-            case 400:
-                $response['status'] = 'bad_request';
-                $response['message'] = 'Invalid invoice data.';
-                break;
+    /**
+     * Checks the status of the payment.
+     *
+     * @access public
+     * @param array $payment_info Payment details
+     * @return array Http response
+     */
+    public function check_payment_status($payment_info) {
+        return $this->make_api_request('/api/merchant/invoice/checkstatus', 'post', $payment_info);
+    }
 
-            case 401:
-                $response['status'] = 'unauthorized';
-                $response['message'] = 'Invalid or no API key provided in authorization header.';
-                break;
-
-            case 404:
-                $response['status'] = 'not_found';
-                $response['message'] = 'Requested URL or resource is not found.';
-                break;
-            
-            default:
-                $response['status'] = 'internal_server_error';
-                $response['message'] = 'An error occurred while processing your request.';
-                break;
-        }
-
-        return $response;
+    /**
+     * Confirms customer transaction.
+     *
+     * @access public
+     * @param array $transaction_details Transaction details
+     * @return array Http response
+     */
+    public function confirm_transaction() {
+        return $this->make_api_request('/api/merchant/transaction/confirm', 'post', $transaction_details);
     }
 }
 
