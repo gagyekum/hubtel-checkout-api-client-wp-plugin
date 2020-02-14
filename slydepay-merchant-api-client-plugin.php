@@ -26,11 +26,11 @@ class SlydepayMerchantAPIClientPlugin {
     private const BASE_URI = 'https://app.slydepay.com.gh';
 
     private function __construct() {
-        add_action( 'init_slydepay_merchant', array( $this, 'get_pay_options' ) );
-        add_action( 'init_slydepay_merchant', array( $this, 'create_invoice' ) );
-        add_action( 'init_slydepay_merchant', array( $this, 'send_invoice' ) );
-        add_action( 'init_slydepay_merchant', array( $this, 'check_payment_status' ) );
-        add_action( 'init_slydepay_merchant', array( $this, 'confirm_transaction' ) );
+        add_action( 'fetch_payment_options', array( $this, 'get_pay_options' ), 10, 1 );
+        add_action( 'save_invoice', array( $this, 'create_invoice' ), 10, 1  );
+        add_action( 'push_invoice', array( $this, 'send_invoice' ), 10, 1 );
+        add_action( 'verify_payment', array( $this, 'check_payment_status' ), 10, 1 );
+        add_action( 'verify_transaction', array( $this, 'confirm_transaction' ), 10, 1 );
     }
 
     /**
